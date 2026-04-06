@@ -22,77 +22,15 @@ function DecBadge({ dec }: { dec: 'W' | 'L' | 'S' | null | undefined }) {
 function TodayTab({ players }: { players: PlayerResult[] }) {
   const played    = players.filter(p => !p.noGame);
   const notPlayed = players.filter(p =>  p.noGame);
-  const pitchers  = played.filter(p => p.type === 'pitcher' || p.type === 'both');
-  const hitters   = played.filter(p => p.type === 'hitter');
+  // 二刀流は投球した日だけ投手テーブルに表示
+  const pitchers  = played.filter(p => (p.type === 'pitcher' || p.type === 'both') && p.pit);
+  // 二刀流は打撃成績があれば野手テーブルにも表示
+  const hitters   = played.filter(p => (p.type === 'hitter' || p.type === 'both') && p.hit);
 
   return (
     <div className="table-wrap">
-      {/* 投手 */}
+      {/* 野手（上に移動） */}
       <div className="section-sep">
-        <span>投手</span>
-        <span style={{ fontWeight: 400, color: '#aaa' }}>{pitchers.length}人が登板・出場</span>
-      </div>
-      <table className="result-table">
-        <thead>
-          <tr>
-            <th className="left" style={{ paddingLeft: 4 }}>選手</th>
-            <th>試合</th><th>勝敗</th>
-            <th>投球回</th><th>K</th><th>BB</th><th>被安打</th><th>失点</th><th>防御率</th><th>判定</th>
-          </tr>
-        </thead>
-        <tbody>
-          {pitchers.map(p => {
-            const pit = p.pit ?? ({} as Partial<NonNullable<PlayerResult['pit']>>);
-            const erCls = (pit.ER ?? 0) >= 5 ? 'danger' : '';
-            const kCls  = (pit.K  ?? 0) >= 7 ? 'hi'     : '';
-            const resClass = p.res === 'W' ? 'result-w' : 'result-l';
-            return (
-              <>
-                <tr key={p.nameEn}>
-                  <td className="left">
-                    <div className="player-cell">
-                      <div className="av av-p">{initials(p.name)}</div>
-                      <div>
-                        <div className="pname">{p.name}</div>
-                        <div className="pteam">{p.team}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap' }}>{p.game ?? '—'}</td>
-                  <td className={resClass}>{p.res === 'W' ? '勝' : '敗'}</td>
-                  <td>{pit.IP ?? '—'}</td>
-                  <td className={kCls}>{pit.K ?? '—'}</td>
-                  <td>{pit.BB ?? '—'}</td>
-                  <td>{pit.H ?? '—'}</td>
-                  <td className={erCls}>{pit.ER ?? '—'}</td>
-                  <td className={erCls}>{pit.ERA ?? '—'}</td>
-                  <td>{p.dec !== undefined ? <DecBadge dec={p.dec} /> : null}</td>
-                </tr>
-                {/* 二刀流の打撃成績 */}
-                {p.type === 'both' && p.hit && (
-                  <tr key={`${p.nameEn}-hit`} style={{ background: '#fafafa' }}>
-                    <td className="left" colSpan={2} style={{ fontSize: 11, color: '#aaa', paddingLeft: 46 }}>DH打撃成績</td>
-                    <td />
-                    <td colSpan={6} style={{ textAlign: 'left', fontSize: 12 }}>
-                      {p.hit.AB}打数 {p.hit.H}安打
-                      {(p.hit.HR ?? 0) > 0 && (
-                        <> <span className="badge b-hr">{p.hit.HR}HR</span></>
-                      )}
-                      {' '}{p.hit.RBI}打点
-                      {(p.hit['2B'] ?? 0) > 0 && <> {p.hit['2B']}二塁打</>}
-                      &nbsp;<span style={{ color: '#aaa' }}>打率 {p.hitAvg}</span>
-                    </td>
-                    <td />
-                  </tr>
-                )}
-              </>
-            );
-          })}
-        </tbody>
-      </table>
-
-      {/* 野手 */}
-      <div className="section-sep" style={{ marginTop: '1rem' }}>
         <span>野手</span>
         <span style={{ fontWeight: 400, color: '#aaa' }}>{hitters.length}人が出場</span>
       </div>
@@ -128,6 +66,51 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
                 <td>{h.R ?? '—'}</td>
                 <td>{h['2B'] ?? '—'}</td>
                 <td style={{ fontSize: 12, color: '#888' }}>{p.hitAvg ?? '—'}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      {/* 投手（下に移動） */}
+      <div className="section-sep" style={{ marginTop: '1rem' }}>
+        <span>投手</span>
+        <span style={{ fontWeight: 400, color: '#aaa' }}>{pitchers.length}人が登板</span>
+      </div>
+      <table className="result-table">
+        <thead>
+          <tr>
+            <th className="left" style={{ paddingLeft: 4 }}>選手</th>
+            <th>試合</th><th>勝敗</th>
+            <th>投球回</th><th>K</th><th>BB</th><th>被安打</th><th>失点</th><th>防御率</th><th>判定</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pitchers.map(p => {
+            const pit = p.pit ?? ({} as Partial<NonNullable<PlayerResult['pit']>>);
+            const erCls = (pit.ER ?? 0) >= 5 ? 'danger' : '';
+            const kCls  = (pit.K  ?? 0) >= 7 ? 'hi'     : '';
+            const resClass = p.res === 'W' ? 'result-w' : 'result-l';
+            return (
+              <tr key={p.nameEn}>
+                <td className="left">
+                  <div className="player-cell">
+                    <div className="av av-p">{initials(p.name)}</div>
+                    <div>
+                      <div className="pname">{p.name}</div>
+                      <div className="pteam">{p.team}</div>
+                    </div>
+                  </div>
+                </td>
+                <td style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap' }}>{p.game ?? '—'}</td>
+                <td className={resClass}>{p.res === 'W' ? '勝' : '敗'}</td>
+                <td>{pit.IP ?? '—'}</td>
+                <td className={kCls}>{pit.K ?? '—'}</td>
+                <td>{pit.BB ?? '—'}</td>
+                <td>{pit.H ?? '—'}</td>
+                <td className={erCls}>{pit.ER ?? '—'}</td>
+                <td className={erCls}>{pit.ERA ?? '—'}</td>
+                <td>{p.dec !== undefined ? <DecBadge dec={p.dec} /> : null}</td>
               </tr>
             );
           })}
