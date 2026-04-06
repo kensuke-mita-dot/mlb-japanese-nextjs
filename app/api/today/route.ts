@@ -11,7 +11,7 @@ import type { PlayerResult } from '@/lib/types';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const date = getMlbDate();
+  const date = getMlbDate(-1);
   const cacheKey = `mlb-daily:${date}`;
 
   const cached = await cacheGet<PlayerResult[]>(cacheKey);

@@ -10,7 +10,7 @@ export const revalidate = 3600;
 async function getPlayers(): Promise<{ players: PlayerResult[]; date: string }> {
   // cron が JST 14:00 (UTC 05:00) に昨日分をキャッシュ済みの想定
   // ページアクセス時は今日の Eastern 日付を使用
-  const date = getMlbDate();
+  const date = getMlbDate(-1);
   const cacheKey = `mlb-daily:${date}`;
 
   // 1. キャッシュを確認

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
 
   // UTC 05:00 時点での Eastern 日付 = 前日分の試合日
-  const date = getMlbDate();
+  const date = getMlbDate(-1);
 
   console.log(`[cron] Fetching MLB daily stats for ${date}...`);
 
