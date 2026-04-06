@@ -1,0 +1,149 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #fff;
+  color: #111;
+  padding: 1rem;
+}
+.app { max-width: 860px; margin: 0 auto; padding: 1rem 0; }
+
+/* header */
+.header { margin-bottom: 1rem; }
+.header h1 { font-size: 19px; font-weight: 500; }
+.header-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 5px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.date-info { font-size: 12px; color: #666; }
+
+/* top nav */
+.top-tabs { display: flex; border-bottom: 0.5px solid #e0e0e0; margin-bottom: 1.25rem; }
+.top-tab {
+  font-size: 13px;
+  padding: 8px 18px;
+  cursor: pointer;
+  color: #666;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -0.5px;
+  background: none;
+}
+.top-tab.active { color: #111; border-bottom-color: #111; font-weight: 500; }
+
+/* table */
+.result-table { width: 100%; border-collapse: collapse; }
+.result-table th {
+  font-size: 10px;
+  font-weight: 500;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  padding: 0 8px 6px;
+  text-align: center;
+  border-bottom: 0.5px solid #e0e0e0;
+  white-space: nowrap;
+}
+.result-table th.left { text-align: left; }
+.result-table td {
+  font-size: 13px;
+  padding: 10px 8px;
+  text-align: center;
+  border-bottom: 0.5px solid #f0f0f0;
+  vertical-align: middle;
+}
+.result-table td.left { text-align: left; }
+.result-table tr:last-child td { border-bottom: none; }
+.result-table tbody tr:hover { background: #f9f9f9; }
+.player-cell { display: flex; align-items: center; gap: 9px; }
+.av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.av-p { background: #FAECE7; color: #993C1D; }
+.av-h { background: #E6F1FB; color: #185FA5; }
+.pname { font-size: 13px; font-weight: 500; white-space: nowrap; }
+.pteam { font-size: 11px; color: #888; }
+.result-w { color: #3B6D11; font-weight: 500; }
+.result-l { color: #A32D2D; font-weight: 500; }
+.badge {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  display: inline-block;
+  white-space: nowrap;
+}
+.b-win  { background: #EAF3DE; color: #3B6D11; }
+.b-loss { background: #FCEBEB; color: #A32D2D; }
+.b-save { background: #E6F1FB; color: #185FA5; }
+.b-hr   { background: #FAEEDA; color: #854F0B; }
+.b-nd   { background: #f0f0f0; color: #999; }
+.hi { color: #185FA5; font-weight: 500; }
+.danger { color: #A32D2D; }
+.section-sep {
+  font-size: 10px;
+  font-weight: 500;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  padding: 10px 0 6px;
+  border-bottom: 0.5px solid #e0e0e0;
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+/* season tab */
+.player-list { display: flex; flex-direction: column; gap: 8px; }
+.player-row {
+  background: #fff;
+  border: 0.5px solid #e0e0e0;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.player-row-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+.player-row-header:hover { background: #f9f9f9; }
+.expand-icon { font-size: 11px; color: #aaa; transition: transform .2s; flex-shrink: 0; }
+.season-stats { padding: 0 14px 14px; }
+.season-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap: 6px; }
+.sstat { background: #f5f5f5; border-radius: 8px; padding: 8px 6px; text-align: center; }
+.sstat-lbl { font-size: 10px; color: #888; margin-bottom: 3px; }
+.sstat-val { font-size: 16px; font-weight: 500; color: #111; }
+
+/* spinners */
+.loading-inline {
+  font-size: 12px;
+  color: #aaa;
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.spinner-sm {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1.5px solid #ddd;
+  border-top-color: #888;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
