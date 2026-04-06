@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import type { PlayerResult, SeasonStats } from '@/lib/types';
 
 // ---- ヘルパー ----
@@ -13,7 +13,6 @@ function DecBadge({ dec }: { dec: 'W' | 'L' | 'S' | null | undefined }) {
   if (dec === 'W') return <span className="badge b-win">勝投</span>;
   if (dec === 'L') return <span className="badge b-loss">敗投</span>;
   if (dec === 'S') return <span className="badge b-save">S</span>;
-  // ND (登板したが勝敗セーブなし)
   return <span className="badge b-nd">ND</span>;
 }
 
@@ -22,14 +21,12 @@ function DecBadge({ dec }: { dec: 'W' | 'L' | 'S' | null | undefined }) {
 function TodayTab({ players }: { players: PlayerResult[] }) {
   const played    = players.filter(p => !p.noGame);
   const notPlayed = players.filter(p =>  p.noGame);
-  // 二刀流は投球した日だけ投手テーブルに表示
   const pitchers  = played.filter(p => (p.type === 'pitcher' || p.type === 'both') && p.pit);
-  // 二刀流は打撃成績があれば野手テーブルにも表示
-  const hitters   = played.filter(p => (p.type === 'hitter' || p.type === 'both') && p.hit);
+  const hitters   = played.filter(p => (p.type === 'hitter'  || p.type === 'both') && p.hit);
 
   return (
     <div className="table-wrap">
-      {/* 野手（上に移動） */}
+      {/* 野手 */}
       <div className="section-sep">
         <span>野手</span>
         <span style={{ fontWeight: 400, color: '#aaa' }}>{hitters.length}人が出場</span>
@@ -38,7 +35,7 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
         <thead>
           <tr>
             <th className="left" style={{ paddingLeft: 4 }}>選手</th>
-            <th>試合</th><th>勝敗</th>
+            <th>試合</th><th>チーム勝敗</th>
             <th>打数</th><th>安打</th><th>本塁打</th><th>打点</th><th>得点</th><th>二塁打</th><th>打率</th>
           </tr>
         </thead>
@@ -72,7 +69,7 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
         </tbody>
       </table>
 
-      {/* 投手（下に移動） */}
+      {/* 投手 */}
       <div className="section-sep" style={{ marginTop: '1rem' }}>
         <span>投手</span>
         <span style={{ fontWeight: 400, color: '#aaa' }}>{pitchers.length}人が登板</span>
@@ -81,7 +78,7 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
         <thead>
           <tr>
             <th className="left" style={{ paddingLeft: 4 }}>選手</th>
-            <th>試合</th><th>勝敗</th>
+            <th>試合</th><th>チーム勝敗</th>
             <th>投球回</th><th>K</th><th>BB</th><th>被安打</th><th>失点</th><th>防御率</th><th>判定</th>
           </tr>
         </thead>
@@ -124,16 +121,7 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 8 }}>
         {notPlayed.map(p => (
-          <div
-            key={p.nameEn}
-            style={{
-              fontSize: 12,
-              color: '#999',
-              background: '#f5f5f5',
-              borderRadius: 99,
-              padding: '4px 12px',
-            }}
-          >
+          <div key={p.nameEn} style={{ fontSize: 12, color: '#999', background: '#f5f5f5', borderRadius: 99, padding: '4px 12px' }}>
             {p.name} <span style={{ opacity: .6 }}>{p.team}</span>
           </div>
         ))}
@@ -144,152 +132,159 @@ function TodayTab({ players }: { players: PlayerResult[] }) {
 
 // ---- 通算成績タブ ----
 
-function SeasonStatGrid({ stats }: { stats: SeasonStats }) {
-  const isPitcher = stats.type === 'pitcher' || stats.type === 'both';
-  const isHitter  = stats.type === 'hitter'  || stats.type === 'both';
-  const s = stats as unknown as Record<string, unknown>;
+type StatsMap = Map<string, SeasonStats | 'error'>;
+
+function SeasonHitterRow({ player, stats }: { player: PlayerResult; stats: SeasonStats | 'error' | undefined }) {
+  const s = (stats && stats !== 'error' ? stats : {}) as Record<string, unknown>;
+  const isPitcher = player.type === 'both';
+  const gKey = isPitcher ? 'hitG' : 'G';
+  const loading = stats === undefined;
 
   return (
-    <>
-      {'seasonNote' in stats && stats.seasonNote && (
-        <div style={{ fontSize: 12, color: '#666', marginBottom: 10, paddingBottom: 8, borderBottom: '0.5px solid #eee' }}>
-          {stats.seasonNote}
+    <tr>
+      <td className="left">
+        <div className="player-cell">
+          <div className="av av-h">{initials(player.name)}</div>
+          <div>
+            <div className="pname">{player.name}</div>
+            <div className="pteam">{player.team}</div>
+          </div>
         </div>
-      )}
-      {isPitcher && (
+      </td>
+      {loading ? (
+        <td colSpan={10} style={{ color: '#aaa', fontSize: 12 }}>
+          <span className="spinner-sm" style={{ display: 'inline-block', marginRight: 4 }} />取得中
+        </td>
+      ) : stats === 'error' ? (
+        <td colSpan={10} style={{ color: '#aaa', fontSize: 12 }}>—</td>
+      ) : (
         <>
-          <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6 }}>
-            投手成績 ({new Date().getFullYear()})
-          </div>
-          <div className="season-grid">
-            {([
-              ['登板', 'G'], ['勝', 'W'], ['敗', 'L'], ['S', 'SV'],
-              ['投球回', 'IP'], ['防御率', 'ERA'], ['WHIP', 'WHIP'],
-              ['K', 'K'], ['BB', 'BB'],
-            ] as [string, string][]).map(([lbl, key]) => {
-              const val = s[key] as string | number | undefined;
-              const cls = lbl === '防御率'
-                ? (parseFloat(String(val)) < 3 ? 'hi' : parseFloat(String(val)) > 5 ? 'danger' : '')
-                : '';
-              return (
-                <div className="sstat" key={key}>
-                  <div className="sstat-lbl">{lbl}</div>
-                  <div className={`sstat-val ${cls}`}>{val ?? '—'}</div>
-                </div>
-              );
-            })}
-          </div>
+          <td>{(s[gKey] as number) ?? '—'}</td>
+          <td>{(s.AB as number) ?? '—'}</td>
+          <td className={(s.H as number) >= 100 ? 'hi' : ''}>{(s.H as number) ?? '—'}</td>
+          <td className={(s.HR as number) > 0 ? 'hi' : ''}>{(s.HR as number) ?? '—'}</td>
+          <td className={(s.RBI as number) >= 50 ? 'hi' : ''}>{(s.RBI as number) ?? '—'}</td>
+          <td>{(s.R as number) ?? '—'}</td>
+          <td>{(s.SB as number) ?? '—'}</td>
+          <td style={{ fontSize: 12, color: '#888' }}>{(s.AVG as string) ?? '—'}</td>
+          <td style={{ fontSize: 12, color: '#888' }}>{(s.OBP as string) ?? '—'}</td>
+          <td className={parseFloat(s.OPS as string) > 0.9 ? 'hi' : ''} style={{ fontSize: 12 }}>{(s.OPS as string) ?? '—'}</td>
         </>
       )}
-      {isHitter && (
-        <>
-          {isPitcher && <div style={{ height: 12 }} />}
-          <div style={{ fontSize: 10, color: '#aaa', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 6, marginTop: 4 }}>
-            打撃成績 ({new Date().getFullYear()})
-          </div>
-          <div className="season-grid">
-            {([
-              // 二刀流は hitG（打者出場数）、純野手は G を使う
-              ['試合', isPitcher ? 'hitG' : 'G'], ['打数', 'AB'], ['安打', 'H'], ['本塁打', 'HR'],
-              ['打点', 'RBI'], ['得点', 'R'], ['盗塁', 'SB'],
-              ['打率', 'AVG'], ['出塁率', 'OBP'], ['長打率', 'SLG'], ['OPS', 'OPS'],
-            ] as [string, string][]).filter(([, key]) => s[key] !== undefined).map(([lbl, key]) => {
-              const val = s[key] as string | number | undefined;
-              const cls = lbl === 'OPS' && parseFloat(String(val)) > .9
-                ? 'hi'
-                : lbl === '本塁打' && parseInt(String(val)) > 0
-                  ? 'hi'
-                  : '';
-              return (
-                <div className="sstat" key={key}>
-                  <div className="sstat-lbl">{lbl}</div>
-                  <div className={`sstat-val ${cls}`}>{val ?? '—'}</div>
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
-    </>
+    </tr>
   );
 }
 
-function PlayerSeasonRow({
-  player,
-  index,
-  season,
-}: {
-  player: PlayerResult;
-  index: number;
-  season: number;
-}) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<SeasonStats | null>(null);
-  const [error, setError] = useState('');
-
-  const toggle = useCallback(async () => {
-    if (open) { setOpen(false); return; }
-    setOpen(true);
-    if (stats || error) return;
-
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/season?playerId=${player.mlbId}&season=${season}`);
-      if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.error ?? 'エラー');
-      }
-      setStats(await res.json());
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'データを取得できませんでした');
-    } finally {
-      setLoading(false);
-    }
-  }, [open, stats, error, player.mlbId, season]);
-
-  const isPit = player.type === 'pitcher' || player.type === 'both';
-  const typeLabel = player.type === 'both' ? '二刀流' : isPit ? '投手' : '野手';
+function SeasonPitcherRow({ player, stats }: { player: PlayerResult; stats: SeasonStats | 'error' | undefined }) {
+  const s = (stats && stats !== 'error' ? stats : {}) as Record<string, unknown>;
+  const loading = stats === undefined;
 
   return (
-    <div className={`player-row${open ? ' open' : ''}`} id={`row-${index}`}>
-      <div className="player-row-header" onClick={toggle}>
-        <div className={`av ${isPit ? 'av-p' : 'av-h'}`}>{initials(player.name)}</div>
-        <div style={{ flex: 1 }}>
-          <div className="pname">{player.name}</div>
-          <div className="pteam">{player.team} · {typeLabel}</div>
+    <tr>
+      <td className="left">
+        <div className="player-cell">
+          <div className="av av-p">{initials(player.name)}</div>
+          <div>
+            <div className="pname">{player.name}</div>
+            <div className="pteam">{player.team}</div>
+          </div>
         </div>
-        <span
-          className="expand-icon"
-          style={{ transform: open ? 'rotate(180deg)' : undefined }}
-        >
-          ▾
-        </span>
-      </div>
-      {open && (
-        <div className="season-stats">
-          {loading && (
-            <div className="loading-inline">
-              <span className="spinner-sm" />
-              取得中...
-            </div>
-          )}
-          {error && (
-            <div style={{ fontSize: 12, color: '#aaa', padding: '8px 0' }}>{error}</div>
-          )}
-          {stats && <SeasonStatGrid stats={stats} />}
-        </div>
+      </td>
+      {loading ? (
+        <td colSpan={9} style={{ color: '#aaa', fontSize: 12 }}>
+          <span className="spinner-sm" style={{ display: 'inline-block', marginRight: 4 }} />取得中
+        </td>
+      ) : stats === 'error' ? (
+        <td colSpan={9} style={{ color: '#aaa', fontSize: 12 }}>—</td>
+      ) : (
+        <>
+          <td>{(s.G as number) ?? '—'}</td>
+          <td>{(s.W as number) ?? '—'}</td>
+          <td>{(s.L as number) ?? '—'}</td>
+          <td>{(s.SV as number) ?? '—'}</td>
+          <td>{(s.IP as string) ?? '—'}</td>
+          <td className={parseFloat(s.ERA as string) < 3 ? 'hi' : parseFloat(s.ERA as string) > 5 ? 'danger' : ''}>
+            {(s.ERA as string) ?? '—'}
+          </td>
+          <td>{(s.WHIP as string) ?? '—'}</td>
+          <td className={(s.K as number) >= 100 ? 'hi' : ''}>{(s.K as number) ?? '—'}</td>
+          <td>{(s.BB as number) ?? '—'}</td>
+        </>
       )}
-    </div>
+    </tr>
   );
 }
 
 function SeasonTab({ players, season }: { players: PlayerResult[]; season: number }) {
+  const [statsMap, setStatsMap] = useState<StatsMap>(new Map());
+  const [fetched, setFetched] = useState(false);
+
+  // タブを開いた瞬間に全員分を並列取得
+  useEffect(() => {
+    if (fetched) return;
+    setFetched(true);
+
+    players.forEach(async p => {
+      if (p.mlbId === 0) {
+        setStatsMap(prev => new Map(prev).set(p.nameEn, 'error'));
+        return;
+      }
+      try {
+        const res = await fetch(`/api/season?playerId=${p.mlbId}&season=${season}`);
+        const data: SeasonStats = await res.json();
+        setStatsMap(prev => new Map(prev).set(p.nameEn, res.ok ? data : 'error'));
+      } catch {
+        setStatsMap(prev => new Map(prev).set(p.nameEn, 'error'));
+      }
+    });
+  }, [fetched, players, season]);
+
+  // 野手：hitter + both（大谷は野手テーブルにも）
+  const hitters  = players.filter(p => p.type === 'hitter' || p.type === 'both');
+  // 投手：pitcher + both（大谷は投手テーブルにも）
+  const pitchers = players.filter(p => p.type === 'pitcher' || p.type === 'both');
+
   return (
-    <div className="player-list">
-      {players.map((p, i) => (
-        <PlayerSeasonRow key={p.nameEn} player={p} index={i} season={season} />
-      ))}
+    <div className="table-wrap">
+      {/* 野手 */}
+      <div className="section-sep">
+        <span>野手</span>
+        <span style={{ fontWeight: 400, color: '#aaa' }}>通算成績 {season}</span>
+      </div>
+      <table className="result-table">
+        <thead>
+          <tr>
+            <th className="left" style={{ paddingLeft: 4 }}>選手</th>
+            <th>試合</th><th>打数</th><th>安打</th><th>本塁打</th>
+            <th>打点</th><th>得点</th><th>盗塁</th><th>打率</th><th>出塁率</th><th>OPS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {hitters.map(p => (
+            <SeasonHitterRow key={p.nameEn} player={p} stats={statsMap.get(p.nameEn)} />
+          ))}
+        </tbody>
+      </table>
+
+      {/* 投手 */}
+      <div className="section-sep" style={{ marginTop: '1rem' }}>
+        <span>投手</span>
+        <span style={{ fontWeight: 400, color: '#aaa' }}>通算成績 {season}</span>
+      </div>
+      <table className="result-table">
+        <thead>
+          <tr>
+            <th className="left" style={{ paddingLeft: 4 }}>選手</th>
+            <th>登板</th><th>勝</th><th>敗</th><th>S</th>
+            <th>投球回</th><th>防御率</th><th>WHIP</th><th>K</th><th>BB</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pitchers.map(p => (
+            <SeasonPitcherRow key={p.nameEn} player={p} stats={statsMap.get(p.nameEn)} />
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -305,7 +300,6 @@ export default function Widget({
 }) {
   const [activeTab, setActiveTab] = useState<'today' | 'season'>('today');
 
-  // date: YYYY-MM-DD (Eastern)
   const [yyyy, mm, dd] = date.split('-');
   const dateLabel = `${yyyy}年${parseInt(mm)}月${parseInt(dd)}日 (Eastern) · 全試合スキャン済み`;
   const season = parseInt(yyyy, 10);
